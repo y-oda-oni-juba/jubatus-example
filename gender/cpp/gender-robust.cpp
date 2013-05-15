@@ -54,24 +54,26 @@ int main(int argc, char **argv) {
   train_data.push_back(make_pair("female", make_datum("long", "jacket", "skirt", 1.43)));
   //train_data.push_back(make_pair("male",   make_datum("short", "jacket", "jeans", 1.76)));
   //train_data.push_back(make_pair("female", make_datum("long", "sweater", "skirt", 1.52)));
-
-#define RPC_RETRY_EXCEPTION_COMMON_HANDLER(label) \
-    if ( ++retry_count >= retry_max ) throw; \
+  
+#define RPC_RETRY_EXCEPTION_COMMON_HANDLER() \
+  if ( ++retry_count >= retry_max ) throw;   \
                                              \
-    client.get_client().close(); \
-    std::cerr << e.what() << std::endl; \
-    ::sleep( retry_interval ); \
-    goto label;
+  client.get_client().close();               \
+  std::cerr << e.what() << std::endl;        \
+  ::sleep( retry_interval );                 \
+  continue;
 
-  int retry_count = 0;
- retry_train:
-  try {
-    client.train(name, train_data);
-  } catch( msgpack::rpc::timeout_error &e ) {
-    RPC_RETRY_EXCEPTION_COMMON_HANDLER(retry_train);
-  } 
-  catch( msgpack::rpc::connection_closed_error &e ) {   
-    RPC_RETRY_EXCEPTION_COMMON_HANDLER(retry_train);
+  int retry_count = 0; 
+  while(true) {
+    try {
+      client.train(name, train_data);
+    } catch( msgpack::rpc::timeout_error &e ) {
+      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+    } 
+    catch( msgpack::rpc::connection_closed_error &e ) {   
+      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+    }
+    break;
   }
 
   std::cout << "now, classify: " << std::flush;
@@ -85,14 +87,16 @@ int main(int argc, char **argv) {
   vector<vector<estimate_result> > results;
 
   retry_count = 0;
- retry_classify:
-  try {
-    results = client.classify(name, test_data);
-  } catch( msgpack::rpc::timeout_error &e ) {
-    RPC_RETRY_EXCEPTION_COMMON_HANDLER(retry_classify);
-  } 
-  catch( msgpack::rpc::connection_closed_error &e ) {   
-    RPC_RETRY_EXCEPTION_COMMON_HANDLER(retry_classify);
+  while(true) {
+    try {
+      results = client.classify(name, test_data);
+    } catch( msgpack::rpc::timeout_error &e ) {
+      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+    } 
+    catch( msgpack::rpc::connection_closed_error &e ) {   
+      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+    }
+    break;
   }
   
   for (size_t i = 0; i < results.size(); ++i) {

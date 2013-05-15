@@ -12,30 +12,32 @@ using std::vector;
 using jubatus::classifier::datum;
 using jubatus::classifier::estimate_result;
 
-#define RPC_RETRY_INITIALIZE(max,interval)      \
-  int internal_retry_max_ = max;                \
-  int internal_retry_interval_ = interval;      \
-  int internal_retry_count_ = 0
-#define RPC_RETRY_BEGIN(label)                  \
-  internal_retry_count_ = 0;                    \
-label:                                          \
- try
+#define RPC_RETRY_BEGIN(max,interval)                                   \
+  do {                                                                  \
+    const int internal_retry_max_ = max;                                  \
+    const int internal_retry_interval_ = interval;                      \
+    int internal_retry_count_ = 0;                                      \
+    while(true) {                                                       \
+      try
 
-#define RPC_RETRY_EXCEPTION_COMMON_HANDLER(label)       \
+#define RPC_RETRY_EXCEPTION_COMMON_HANDLER()                    \
   if ( ++internal_retry_count_ >= internal_retry_max_ ) throw;  \
-                                                        \
-  client.get_client().close();                          \
-  std::cerr << e.what() << std::endl;                   \
+                                                                \
+  client.get_client().close();                                    \
+  std::cerr << e.what() << std::endl;                             \
   ::sleep( internal_retry_interval_ );                            \
-  goto label;
+  continue;
 
-#define RPC_RETRY_END(label)                               \
-  catch( msgpack::rpc::timeout_error &e ) {                \
-    RPC_RETRY_EXCEPTION_COMMON_HANDLER(label);             \
-  }                                                        \
-  catch( msgpack::rpc::connection_closed_error &e ) {      \
-    RPC_RETRY_EXCEPTION_COMMON_HANDLER(label);             \
-  }
+#define RPC_RETRY_END()                                    \
+      catch( msgpack::rpc::timeout_error &e ) {                \
+        RPC_RETRY_EXCEPTION_COMMON_HANDLER();                  \
+      }                                                        \
+      catch( msgpack::rpc::connection_closed_error &e ) {      \
+        RPC_RETRY_EXCEPTION_COMMON_HANDLER();                  \
+      }                                                        \
+      break;                                                   \
+    } \
+  } while(false)
 
 datum make_datum(const string& hair, const string& top, const string& bottom, double height) {
   datum d;
@@ -67,8 +69,6 @@ int main(int argc, char **argv) {
 
   jubatus::classifier::client::classifier client(host, port, 1.0);
 
-  RPC_RETRY_INITIALIZE(5, 3);
-  
   vector<pair<string, datum> > train_data;
   train_data.push_back(make_pair("male",   make_datum("short", "sweater", "jeans", 1.70)));
   train_data.push_back(make_pair("female", make_datum("long", "shirt", "skirt", 1.56)));
@@ -79,10 +79,10 @@ int main(int argc, char **argv) {
   //train_data.push_back(make_pair("male",   make_datum("short", "jacket", "jeans", 1.76)));
   //train_data.push_back(make_pair("female", make_datum("long", "sweater", "skirt", 1.52)));
 
-  RPC_RETRY_BEGIN(retry_train) {
+  RPC_RETRY_BEGIN(5, 1) {
     client.train(name, train_data);
   }
-  RPC_RETRY_END(retry_train);
+  RPC_RETRY_END();
 
   std::cout << "now, classify: " << std::flush;
   string confirm;
@@ -93,10 +93,10 @@ int main(int argc, char **argv) {
   test_data.push_back(make_datum("long", "shirt", "skirt", 1.50));
 
   vector<vector<estimate_result> > results;
-  RPC_RETRY_BEGIN(retry_classify) {
+  RPC_RETRY_BEGIN(5, 1) {
     results = client.classify(name, test_data);
   }
-  RPC_RETRY_END(retry_classify);
+  RPC_RETRY_END();
   
   for (size_t i = 0; i < results.size(); ++i) {
     for (size_t j = 0; j < results[i].size(); ++j) {
