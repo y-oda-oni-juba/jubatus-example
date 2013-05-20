@@ -34,7 +34,7 @@ jubaclassifierを起動します。
 ソースコード
 ===========
 
-- gender.*: シンプルなクライアントアプリケーションコード
-- gender-robust.*: RPCエラーに伴うリトライやリソース管理を追加したコード
-- gender-robust-clean.*: gender-robust を見栄え良くしたもの
-- gender-robust-more-clean.*: もっと見栄え良くしたもの
+- ``gender.*`` : シンプルなクライアントアプリケーションコード
+- ``gender-robust.*`` : RPCエラーに伴うリトライやリソース管理を追加したコード
+- ``gender-robust-clean.*`` : gender-robust を見栄え良くしたもの
+- ``gender-robust-more-clean.*`` : もっと見栄え良くしたもの
