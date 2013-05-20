@@ -66,29 +66,36 @@ class Retryable(object):
         
 client = Retryable(jubatus.Classifier, host, port, 1)
 
-train_data = [
-    ('male',   datum([('hair', 'short'), ('top', 'sweater'), ('bottom', 'jeans')], [('height', 1.70)])),
-    ('female', datum([('hair', 'long'),  ('top', 'shirt'),   ('bottom', 'skirt')], [('height', 1.56)])),
-    ('male',   datum([('hair', 'short'), ('top', 'jacket'),  ('bottom', 'chino')], [('height', 1.65)])),
-    ('female', datum([('hair', 'short'), ('top', 'T shirt'), ('bottom', 'jeans')], [('height', 1.72)])),
-    ('male',   datum([('hair', 'long'),  ('top', 'T shirt'), ('bottom', 'jeans')], [('height', 1.82)])),
-    ('female', datum([('hair', 'long'),  ('top', 'jacket'),  ('bottom', 'skirt')], [('height', 1.43)])),
-#    ('male',   datum([('hair', 'short'), ('top', 'jacket'),  ('bottom', 'jeans')], [('height', 1.76)])),
-#    ('female', datum([('hair', 'long'),  ('top', 'sweater'), ('bottom', 'skirt')], [('height', 1.52)])),
-    ]
+try:
+    train_data = [
+        ('male',   datum([('hair', 'short'), ('top', 'sweater'), ('bottom', 'jeans')], [('height', 1.70)])),
+        ('female', datum([('hair', 'long'),  ('top', 'shirt'),   ('bottom', 'skirt')], [('height', 1.56)])),
+        ('male',   datum([('hair', 'short'), ('top', 'jacket'),  ('bottom', 'chino')], [('height', 1.65)])),
+        ('female', datum([('hair', 'short'), ('top', 'T shirt'), ('bottom', 'jeans')], [('height', 1.72)])),
+        ('male',   datum([('hair', 'long'),  ('top', 'T shirt'), ('bottom', 'jeans')], [('height', 1.82)])),
+        ('female', datum([('hair', 'long'),  ('top', 'jacket'),  ('bottom', 'skirt')], [('height', 1.43)])),
+        #    ('male',   datum([('hair', 'short'), ('top', 'jacket'),  ('bottom', 'jeans')], [('height', 1.76)])),
+        #    ('female', datum([('hair', 'long'),  ('top', 'sweater'), ('bottom', 'skirt')], [('height', 1.52)])),
+        ]
 
-client.with_retry(5, 1).train(name, train_data)
+    client.with_retry(5, 1).train(name, train_data)
 
-raw_input('now, classify: ')
+    time.sleep(3)
 
-test_data = [
-    datum([('hair', 'short'), ('top', 'T shirt'), ('bottom', 'jeans')], [('height', 1.81)]),
-    datum([('hair', 'long'),  ('top', 'shirt'),   ('bottom', 'skirt')], [('height', 1.50)]),
-]
+    test_data = [
+        datum([('hair', 'short'), ('top', 'T shirt'), ('bottom', 'jeans')], [('height', 1.81)]),
+        datum([('hair', 'long'),  ('top', 'shirt'),   ('bottom', 'skirt')], [('height', 1.50)]),
+        ]
 
-results = client.with_retry(5, 1).classify(name, test_data)
+    results = client.with_retry(5, 1).classify(name, test_data)
 
-for result in results:
-    for r in result:
-        print r.label, r.score
-    print
+    for result in results:
+        for r in result:
+            print r.label, r.score
+            print
+
+except msgpackrpc.error.RPCError as e:
+    print e
+
+finally:
+    client.get_client().close()

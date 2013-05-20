@@ -69,40 +69,42 @@ int main(int argc, char **argv) {
 
   jubatus::classifier::client::classifier client(host, port, 1.0);
 
-  vector<pair<string, datum> > train_data;
-  train_data.push_back(make_pair("male",   make_datum("short", "sweater", "jeans", 1.70)));
-  train_data.push_back(make_pair("female", make_datum("long", "shirt", "skirt", 1.56)));
-  train_data.push_back(make_pair("male",   make_datum("short", "jacket", "chino", 1.65)));
-  train_data.push_back(make_pair("female", make_datum("short", "T shirt", "jeans", 1.72)));
-  train_data.push_back(make_pair("male",   make_datum("long", "T shirt", "jeans", 1.82)));
-  train_data.push_back(make_pair("female", make_datum("long", "jacket", "skirt", 1.43)));
-  //train_data.push_back(make_pair("male",   make_datum("short", "jacket", "jeans", 1.76)));
-  //train_data.push_back(make_pair("female", make_datum("long", "sweater", "skirt", 1.52)));
+  try {
+    vector<pair<string, datum> > train_data;
+    train_data.push_back(make_pair("male",   make_datum("short", "sweater", "jeans", 1.70)));
+    train_data.push_back(make_pair("female", make_datum("long", "shirt", "skirt", 1.56)));
+    train_data.push_back(make_pair("male",   make_datum("short", "jacket", "chino", 1.65)));
+    train_data.push_back(make_pair("female", make_datum("short", "T shirt", "jeans", 1.72)));
+    train_data.push_back(make_pair("male",   make_datum("long", "T shirt", "jeans", 1.82)));
+    train_data.push_back(make_pair("female", make_datum("long", "jacket", "skirt", 1.43)));
+    //train_data.push_back(make_pair("male",   make_datum("short", "jacket", "jeans", 1.76)));
+    //train_data.push_back(make_pair("female", make_datum("long", "sweater", "skirt", 1.52)));
 
-  RPC_RETRY_BEGIN(5, 1) {
-    client.train(name, train_data);
-  }
-  RPC_RETRY_END();
-
-  std::cout << "now, classify: " << std::flush;
-  string confirm;
-  std::getline(std::cin, confirm);
-
-  vector<datum> test_data;
-  test_data.push_back(make_datum("short", "T shirt", "jeans", 1.81));
-  test_data.push_back(make_datum("long", "shirt", "skirt", 1.50));
-
-  vector<vector<estimate_result> > results;
-  RPC_RETRY_BEGIN(5, 1) {
-    results = client.classify(name, test_data);
-  }
-  RPC_RETRY_END();
-  
-  for (size_t i = 0; i < results.size(); ++i) {
-    for (size_t j = 0; j < results[i].size(); ++j) {
-      const estimate_result& r = results[i][j];
-      std::cout << r.label << " " << r.score << std::endl;
+    RPC_RETRY_BEGIN(5, 1) {
+      client.train(name, train_data);
     }
-    std::cout << std::endl;
+    RPC_RETRY_END();
+
+    ::sleep(3);
+
+    vector<datum> test_data;
+    test_data.push_back(make_datum("short", "T shirt", "jeans", 1.81));
+    test_data.push_back(make_datum("long", "shirt", "skirt", 1.50));
+
+    vector<vector<estimate_result> > results;
+    RPC_RETRY_BEGIN(5, 1) {
+      results = client.classify(name, test_data);
+    }
+    RPC_RETRY_END();
+  
+    for (size_t i = 0; i < results.size(); ++i) {
+      for (size_t j = 0; j < results[i].size(); ++j) {
+        const estimate_result& r = results[i][j];
+        std::cout << r.label << " " << r.score << std::endl;
+      }
+      std::cout << std::endl;
+    }
+  } catch( msgpack::rpc::rpc_error &e ) {
+    std::cerr << e.what() << std::endl;
   }
 }

@@ -45,65 +45,67 @@ int main(int argc, char **argv) {
 
   jubatus::classifier::client::classifier client(host, port, 1.0);
   
-  vector<pair<string, datum> > train_data;
-  train_data.push_back(make_pair("male",   make_datum("short", "sweater", "jeans", 1.70)));
-  train_data.push_back(make_pair("female", make_datum("long", "shirt", "skirt", 1.56)));
-  train_data.push_back(make_pair("male",   make_datum("short", "jacket", "chino", 1.65)));
-  train_data.push_back(make_pair("female", make_datum("short", "T shirt", "jeans", 1.72)));
-  train_data.push_back(make_pair("male",   make_datum("long", "T shirt", "jeans", 1.82)));
-  train_data.push_back(make_pair("female", make_datum("long", "jacket", "skirt", 1.43)));
-  //train_data.push_back(make_pair("male",   make_datum("short", "jacket", "jeans", 1.76)));
-  //train_data.push_back(make_pair("female", make_datum("long", "sweater", "skirt", 1.52)));
+  try {
+    vector<pair<string, datum> > train_data;
+    train_data.push_back(make_pair("male",   make_datum("short", "sweater", "jeans", 1.70)));
+    train_data.push_back(make_pair("female", make_datum("long", "shirt", "skirt", 1.56)));
+    train_data.push_back(make_pair("male",   make_datum("short", "jacket", "chino", 1.65)));
+    train_data.push_back(make_pair("female", make_datum("short", "T shirt", "jeans", 1.72)));
+    train_data.push_back(make_pair("male",   make_datum("long", "T shirt", "jeans", 1.82)));
+    train_data.push_back(make_pair("female", make_datum("long", "jacket", "skirt", 1.43)));
+    //train_data.push_back(make_pair("male",   make_datum("short", "jacket", "jeans", 1.76)));
+    //train_data.push_back(make_pair("female", make_datum("long", "sweater", "skirt", 1.52)));
   
-#define RPC_RETRY_EXCEPTION_COMMON_HANDLER() \
-  if ( ++retry_count >= retry_max ) throw;   \
-                                             \
-  client.get_client().close();               \
-  std::cerr << e.what() << std::endl;        \
-  ::sleep( retry_interval );                 \
-  continue;
+#define RPC_RETRY_EXCEPTION_COMMON_HANDLER()    \
+    if ( ++retry_count >= retry_max ) throw;    \
+                                                \
+    client.get_client().close();                \
+    std::cerr << e.what() << std::endl;         \
+    ::sleep( retry_interval );                  \
+    continue;
 
-  int retry_count = 0; 
-  while(true) {
-    try {
-      client.train(name, train_data);
-    } catch( msgpack::rpc::timeout_error &e ) {
-      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
-    } 
-    catch( msgpack::rpc::connection_closed_error &e ) {   
-      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+    int retry_count = 0; 
+    while(true) {
+      try {
+        client.train(name, train_data);
+      } catch( msgpack::rpc::timeout_error &e ) {
+        RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+      } 
+      catch( msgpack::rpc::connection_closed_error &e ) {   
+        RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+      }
+      break;
     }
-    break;
-  }
 
-  std::cout << "now, classify: " << std::flush;
-  string confirm;
-  std::getline(std::cin, confirm);
+    ::sleep(3);
 
-  vector<datum> test_data;
-  test_data.push_back(make_datum("short", "T shirt", "jeans", 1.81));
-  test_data.push_back(make_datum("long", "shirt", "skirt", 1.50));
+    vector<datum> test_data;
+    test_data.push_back(make_datum("short", "T shirt", "jeans", 1.81));
+    test_data.push_back(make_datum("long", "shirt", "skirt", 1.50));
 
-  vector<vector<estimate_result> > results;
+    vector<vector<estimate_result> > results;
 
-  retry_count = 0;
-  while(true) {
-    try {
-      results = client.classify(name, test_data);
-    } catch( msgpack::rpc::timeout_error &e ) {
-      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
-    } 
-    catch( msgpack::rpc::connection_closed_error &e ) {   
-      RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+    retry_count = 0;
+    while(true) {
+      try {
+        results = client.classify(name, test_data);
+      } catch( msgpack::rpc::timeout_error &e ) {
+        RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+      } 
+      catch( msgpack::rpc::connection_closed_error &e ) {   
+        RPC_RETRY_EXCEPTION_COMMON_HANDLER();
+      }
+      break;
     }
-    break;
-  }
   
-  for (size_t i = 0; i < results.size(); ++i) {
-    for (size_t j = 0; j < results[i].size(); ++j) {
-      const estimate_result& r = results[i][j];
-      std::cout << r.label << " " << r.score << std::endl;
+    for (size_t i = 0; i < results.size(); ++i) {
+      for (size_t j = 0; j < results[i].size(); ++j) {
+        const estimate_result& r = results[i][j];
+        std::cout << r.label << " " << r.score << std::endl;
+      }
+      std::cout << std::endl;
     }
-    std::cout << std::endl;
+  } catch( msgpack::rpc::rpc_error &e ) {
+    std::cerr << e.what() << std::endl;
   }
 }
