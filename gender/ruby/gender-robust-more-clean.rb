@@ -67,9 +67,7 @@ begin
 
   client.with_retry.train(name, train_data)
 
-  $stdout.write "now, classify: "
-  $stdout.flush
-  $stdin.gets
+  sleep 3
 
   test_data =
     [
